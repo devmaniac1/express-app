@@ -88,6 +88,22 @@ app.get("/api/firebase-test", (req, res) => {
       testResult.project_id = serviceAccount.project_id;
       testResult.client_email = serviceAccount.client_email;
       testResult.has_private_key = !!serviceAccount.private_key;
+
+      // Try to initialize Firebase right now if it's not already initialized
+      if (admin.apps.length === 0) {
+        try {
+          testResult.attempting_init = true;
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+          });
+          testResult.init_attempt_success = true;
+          testResult.firebase_apps_count_after = admin.apps.length;
+        } catch (initError) {
+          testResult.init_attempt_success = false;
+          testResult.init_error = initError.message;
+          testResult.init_error_code = initError.code;
+        }
+      }
     } catch (parseError) {
       testResult.json_parse_success = false;
       testResult.parse_error = parseError.message;
