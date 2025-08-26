@@ -20,6 +20,25 @@ app.use(
 );
 app.use(express.json());
 
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Nursery Registration API is running!', 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    service: 'nursery-registration-api'
+  });
+});
+
 const VA_API_KEY =
   "M2l1MzExeHY0d2p2dWI0Nno2cDQxOlJ6RmFUaTcwRzZyOUlXdHdIa0plcHdHMFdKcDhQYWpQ";
 const VA_API_URL =
@@ -303,6 +322,9 @@ app.post("/api/deleteUserFromAuth", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Export for Vercel
+module.exports = app;
 
 // Export for Firebase Functions
 exports.api = functions.https.onRequest(app);
