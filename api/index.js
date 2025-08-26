@@ -69,6 +69,34 @@ app.post("/api/test", (req, res) => {
   });
 });
 
+// Firebase test endpoint
+app.get("/api/firebase-test", (req, res) => {
+  let testResult = {
+    has_env_var: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+    env_var_length: process.env.FIREBASE_SERVICE_ACCOUNT
+      ? process.env.FIREBASE_SERVICE_ACCOUNT.length
+      : 0,
+    firebase_apps_count: admin.apps.length,
+    firebase_initialized: admin.apps.length > 0,
+    timestamp: new Date().toISOString(),
+  };
+
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      testResult.json_parse_success = true;
+      testResult.project_id = serviceAccount.project_id;
+      testResult.client_email = serviceAccount.client_email;
+      testResult.has_private_key = !!serviceAccount.private_key;
+    } catch (parseError) {
+      testResult.json_parse_success = false;
+      testResult.parse_error = parseError.message;
+    }
+  }
+
+  res.json(testResult);
+});
+
 const VA_API_KEY =
   "M2l1MzExeHY0d2p2dWI0Nno2cDQxOlJ6RmFUaTcwRzZyOUlXdHdIa0plcHdHMFdKcDhQYWpQ";
 const VA_API_URL =
@@ -243,8 +271,14 @@ try {
   if (!admin.apps.length) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       console.log("🔥 Using environment service account");
+      console.log("🔥 Parsing JSON...");
       // Production environment with service account as environment variable
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      console.log(
+        "🔥 JSON parsed successfully, project_id:",
+        serviceAccount.project_id
+      );
+      console.log("🔥 Initializing Firebase Admin...");
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
@@ -264,7 +298,11 @@ try {
   }
 } catch (error) {
   console.error("❌ Firebase initialization error:", error.message);
-  console.error("Stack:", error.stack);
+  console.error("❌ Error code:", error.code);
+  console.error("❌ Error details:", error);
+  if (error.message.includes("JSON")) {
+    console.error("❌ JSON parsing failed - check environment variable format");
+  }
 }
 
 // API endpoint
