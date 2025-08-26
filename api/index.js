@@ -51,6 +51,10 @@ app.get("/api/test", (req, res) => {
   res.json({
     message: "API endpoint is working!",
     firebase_initialized: admin.apps.length > 0,
+    has_env_var: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+    env_var_length: process.env.FIREBASE_SERVICE_ACCOUNT
+      ? process.env.FIREBASE_SERVICE_ACCOUNT.length
+      : 0,
     timestamp: new Date().toISOString(),
   });
 });
@@ -60,6 +64,7 @@ app.post("/api/test", (req, res) => {
     message: "POST API endpoint is working!",
     received_body: req.body,
     firebase_initialized: admin.apps.length > 0,
+    has_env_var: !!process.env.FIREBASE_SERVICE_ACCOUNT,
     timestamp: new Date().toISOString(),
   });
 });
@@ -227,9 +232,17 @@ const schema = {
 
 // Initialize Firebase Admin SDK
 let isFirebaseInitialized = false;
+console.log("🔥 Starting Firebase initialization...");
+console.log(
+  "Environment variable exists:",
+  !!process.env.FIREBASE_SERVICE_ACCOUNT
+);
+console.log("Admin apps length:", admin.apps.length);
+
 try {
   if (!admin.apps.length) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      console.log("🔥 Using environment service account");
       // Production environment with service account as environment variable
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
       admin.initializeApp({
@@ -237,6 +250,7 @@ try {
       });
       console.log("✅ Firebase initialized with environment service account");
     } else {
+      console.log("🔥 Falling back to local service account file");
       // Development environment with local file
       const serviceAccount = require("../nursery-project-89d8b-firebase-adminsdk-fbsvc-19a2a10086.json");
       admin.initializeApp({
@@ -245,6 +259,8 @@ try {
       console.log("✅ Firebase initialized with local service account file");
     }
     isFirebaseInitialized = true;
+  } else {
+    console.log("✅ Firebase already initialized");
   }
 } catch (error) {
   console.error("❌ Firebase initialization error:", error.message);
