@@ -211,51 +211,10 @@ try {
     console.log("✅ Firebase initialized with environment variable");
     firebaseInitialized = true;
   }
-  //  else {
-  //   // Fallback to local file (for development)
-  //   const serviceAccount = require("./nursery-project-89d8b-firebase-adminsdk-fbsvc-19a2a10086.json");
-  //   admin.initializeApp({
-  //     credential: admin.credential.cert(serviceAccount),
-  //   });
-  //   console.log("✅ Firebase initialized with local file");
-  //   firebaseInitialized = true;
-  // }
 } catch (error) {
   console.error("❌ Firebase initialization failed:", error.message);
   firebaseInitialized = false;
 }
-
-// Environment variables debug endpoint
-app.get("/api/env", (req, res) => {
-  res.json(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
-});
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({
-    status: "OK",
-    firebase_initialized: firebaseInitialized,
-    firebase_apps_count: admin.apps.length,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Root endpoint
-app.get("/", (req, res) => {
-  res.json({
-    message: "Nursery Registration API",
-    version: "1.0.0",
-    firebase_initialized: firebaseInitialized,
-    endpoints: [
-      "GET /",
-      "GET /health",
-      "GET /api/env",
-      "POST /extract",
-      "POST /api/deleteUserFromAuth",
-    ],
-    timestamp: new Date().toISOString(),
-  });
-});
 
 // API endpoint
 app.post("/extract", upload.single("file"), async (req, res) => {
