@@ -1,6 +1,3 @@
-// Load environment variables
-require("dotenv").config();
-
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
@@ -9,109 +6,19 @@ const FormData = require("form-data");
 const path = require("path");
 const cors = require("cors");
 const admin = require("firebase-admin");
+const functions = require("firebase-functions");
 
 const app = express();
-const upload = multer({ dest: "/tmp/" }); // Use /tmp for serverless
+const upload = multer({ dest: "uploads/" });
 
 // Enable CORS
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://your-production-domain.com",
-      "https://nursery-project-89d8b.web.app",
-      "https://nursery-project-89d8b.firebaseapp.com",
-    ],
+    origin: ["http://localhost:3000", "https://your-production-domain.com"],
     credentials: true,
   })
 );
 app.use(express.json());
-
-// Health check endpoint
-app.get("/", (req, res) => {
-  res.json({
-    message: "Nursery Registration API is running!",
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    version: "1.0.0",
-  });
-});
-
-app.get("/health", (req, res) => {
-  res.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    service: "nursery-registration-api",
-  });
-});
-
-// Test endpoint for debugging
-app.get("/api/test", (req, res) => {
-  res.json({
-    message: "API endpoint is working!",
-    firebase_initialized: admin.apps.length > 0,
-    has_env_var: !!process.env.FIREBASE_SERVICE_ACCOUNT,
-    env_var_length: process.env.FIREBASE_SERVICE_ACCOUNT
-      ? process.env.FIREBASE_SERVICE_ACCOUNT.length
-      : 0,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-app.post("/api/test", (req, res) => {
-  res.json({
-    message: "POST API endpoint is working!",
-    received_body: req.body,
-    firebase_initialized: admin.apps.length > 0,
-    has_env_var: !!process.env.FIREBASE_SERVICE_ACCOUNT,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Firebase test endpoint
-app.get("/api/firebase-test", (req, res) => {
-  let testResult = {
-    has_env_var: !!process.env.FIREBASE_SERVICE_ACCOUNT,
-    env_var_length: process.env.FIREBASE_SERVICE_ACCOUNT
-      ? process.env.FIREBASE_SERVICE_ACCOUNT.length
-      : 0,
-    firebase_apps_count: admin.apps.length,
-    firebase_initialized: admin.apps.length > 0,
-    timestamp: new Date().toISOString(),
-  };
-
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    try {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      testResult.json_parse_success = true;
-      testResult.project_id = serviceAccount.project_id;
-      testResult.client_email = serviceAccount.client_email;
-      testResult.has_private_key = !!serviceAccount.private_key;
-
-      // Try to initialize Firebase right now if it's not already initialized
-      if (admin.apps.length === 0) {
-        try {
-          testResult.attempting_init = true;
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-          });
-          testResult.init_attempt_success = true;
-          testResult.firebase_apps_count_after = admin.apps.length;
-        } catch (initError) {
-          testResult.init_attempt_success = false;
-          testResult.init_error = initError.message;
-          testResult.init_error_code = initError.code;
-        }
-      }
-    } catch (parseError) {
-      testResult.json_parse_success = false;
-      testResult.parse_error = parseError.message;
-    }
-  }
-
-  res.json(testResult);
-});
 
 const VA_API_KEY =
   "M2l1MzExeHY0d2p2dWI0Nno2cDQxOlJ6RmFUaTcwRzZyOUlXdHdIa0plcHdHMFdKcDhQYWpQ";
@@ -275,51 +182,10 @@ const schema = {
 };
 
 // Initialize Firebase Admin SDK
-let isFirebaseInitialized = false;
-console.log("🔥 Starting Firebase initialization...");
-console.log(
-  "Environment variable exists:",
-  !!process.env.FIREBASE_SERVICE_ACCOUNT
-);
-console.log("Admin apps length:", admin.apps.length);
-
-try {
-  if (!admin.apps.length) {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      console.log("🔥 Using environment service account");
-      console.log("🔥 Parsing JSON...");
-      // Production environment with service account as environment variable
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      console.log(
-        "🔥 JSON parsed successfully, project_id:",
-        serviceAccount.project_id
-      );
-      console.log("🔥 Initializing Firebase Admin...");
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      console.log("✅ Firebase initialized with environment service account");
-    } else {
-      console.log("🔥 Falling back to local service account file");
-      // Development environment with local file
-      const serviceAccount = require("../nursery-project-89d8b-firebase-adminsdk-fbsvc-19a2a10086.json");
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      console.log("✅ Firebase initialized with local service account file");
-    }
-    isFirebaseInitialized = true;
-  } else {
-    console.log("✅ Firebase already initialized");
-  }
-} catch (error) {
-  console.error("❌ Firebase initialization error:", error.message);
-  console.error("❌ Error code:", error.code);
-  console.error("❌ Error details:", error);
-  if (error.message.includes("JSON")) {
-    console.error("❌ JSON parsing failed - check environment variable format");
-  }
-}
+const serviceAccount = require("./nursery-project-89d8b-firebase-adminsdk-fbsvc-19a2a10086.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 // API endpoint
 app.post("/extract", upload.single("file"), async (req, res) => {
@@ -397,7 +263,7 @@ app.post("/extract", upload.single("file"), async (req, res) => {
     res.json({ extracted_schema: flatData });
   } catch (error) {
     console.error(
-      "❌ Extraction failed:",
+      "âŒ Extraction failed:",
       error.response?.data || error.message
     );
     res.status(500).json({ error: "Extraction failed." });
@@ -405,55 +271,59 @@ app.post("/extract", upload.single("file"), async (req, res) => {
 });
 
 app.post("/api/deleteUserFromAuth", async (req, res) => {
-  console.log("🔥 Delete user request received:", { body: req.body });
-
   const { uid, email } = req.body;
 
   if (!uid && !email) {
-    console.log("❌ Missing uid or email");
     return res.status(400).json({ error: "Missing uid or email" });
   }
 
   try {
-    // Check if Firebase is properly initialized
-    if (!admin.apps.length) {
-      console.log("❌ Firebase not initialized");
-      return res.status(500).json({ error: "Firebase not initialized" });
-    }
-
     let userToDelete = uid;
 
     // If UID missing, lookup by email
     if ((!uid || uid.trim() === "") && email) {
-      console.log("🔍 Looking up user by email:", email);
       const userRecord = await admin.auth().getUserByEmail(email);
       userToDelete = userRecord.uid;
-      console.log("✅ Found user UID:", userToDelete);
     }
 
     // Final check
     if (!userToDelete) {
-      console.log("❌ Could not resolve user UID");
       throw new Error("Could not resolve user UID for deletion");
     }
 
-    console.log("🗑️ Deleting user:", userToDelete);
     await admin.auth().deleteUser(userToDelete);
-    console.log("✅ User deleted successfully");
 
     res.status(200).json({ success: true });
   } catch (err) {
-    console.error("❌ Auth deletion error:", err);
-    console.error("Error details:", {
-      message: err.message,
-      code: err.code,
-      stack: err.stack,
-    });
-    res.status(500).json({
-      error: err.message,
-      code: err.code || "UNKNOWN_ERROR",
-    });
+    console.error("âŒ Auth deletion error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-module.exports = app;
+// Export for Firebase Functions
+exports.api = functions.https.onRequest(app);
+
+// Only start the server if this file is run directly (not required as a module)
+if (require.main === module) {
+  const PORT = process.env.PORT || 8000;
+  app
+    .listen(PORT, () => {
+      console.log(`ðŸš€ Server is running at http://localhost:${PORT}`);
+    })
+    .on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        console.error(
+          `âŒ Port ${PORT} is already in use. Trying port ${
+            parseInt(PORT) + 1
+          }...`
+        );
+        app.listen(parseInt(PORT) + 1, () => {
+          console.log(
+            `ðŸš€ Server is running at http://localhost:${parseInt(PORT) + 1}`
+          );
+        });
+      } else {
+        console.error("âŒ Server startup error:", err);
+      }
+    });
+}
