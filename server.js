@@ -21,21 +21,21 @@ app.use(
 app.use(express.json());
 
 // Health check endpoint
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Nursery Registration API is running!', 
-    status: 'healthy',
+app.get("/", (req, res) => {
+  res.json({
+    message: "Nursery Registration API is running!",
+    status: "healthy",
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: "1.0.0",
   });
 });
 
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy',
+app.get("/health", (req, res) => {
+  res.json({
+    status: "healthy",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    service: 'nursery-registration-api'
+    service: "nursery-registration-api",
   });
 });
 
@@ -204,10 +204,6 @@ const schema = {
 const serviceAccount = require("./nursery-project-89d8b-firebase-adminsdk-fbsvc-19a2a10086.json");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-});
-
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
 });
 
 // API endpoint
