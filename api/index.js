@@ -1,3 +1,6 @@
+// Load environment variables
+require("dotenv").config();
+
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
@@ -13,7 +16,12 @@ const upload = multer({ dest: "/tmp/" }); // Use /tmp for serverless
 // Enable CORS
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://your-production-domain.com"],
+    origin: [
+      "http://localhost:3000",
+      "https://your-production-domain.com",
+      "https://nursery-project-89d8b.web.app",
+      "https://nursery-project-89d8b.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
@@ -35,6 +43,24 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     service: "nursery-registration-api",
+  });
+});
+
+// Test endpoint for debugging
+app.get("/api/test", (req, res) => {
+  res.json({
+    message: "API endpoint is working!",
+    firebase_initialized: admin.apps.length > 0,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.post("/api/test", (req, res) => {
+  res.json({
+    message: "POST API endpoint is working!",
+    received_body: req.body,
+    firebase_initialized: admin.apps.length > 0,
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -201,26 +227,28 @@ const schema = {
 
 // Initialize Firebase Admin SDK
 let isFirebaseInitialized = false;
-if (!isFirebaseInitialized) {
-  try {
-    const serviceAccount = JSON.parse(
-      process.env.FIREBASE_SERVICE_ACCOUNT || "{}"
-    );
-    if (Object.keys(serviceAccount).length > 0) {
+try {
+  if (!admin.apps.length) {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      // Production environment with service account as environment variable
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
+      console.log("✅ Firebase initialized with environment service account");
     } else {
-      // Fallback to local file for development
+      // Development environment with local file
       const serviceAccount = require("../nursery-project-89d8b-firebase-adminsdk-fbsvc-19a2a10086.json");
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
+      console.log("✅ Firebase initialized with local service account file");
     }
     isFirebaseInitialized = true;
-  } catch (error) {
-    console.error("Firebase initialization error:", error.message);
   }
+} catch (error) {
+  console.error("❌ Firebase initialization error:", error.message);
+  console.error("Stack:", error.stack);
 }
 
 // API endpoint
@@ -306,33 +334,55 @@ app.post("/extract", upload.single("file"), async (req, res) => {
   }
 });
 
-app.post("/deleteUserFromAuth", async (req, res) => {
+app.post("/api/deleteUserFromAuth", async (req, res) => {
+  console.log("🔥 Delete user request received:", { body: req.body });
+
   const { uid, email } = req.body;
 
   if (!uid && !email) {
+    console.log("❌ Missing uid or email");
     return res.status(400).json({ error: "Missing uid or email" });
   }
 
   try {
+    // Check if Firebase is properly initialized
+    if (!admin.apps.length) {
+      console.log("❌ Firebase not initialized");
+      return res.status(500).json({ error: "Firebase not initialized" });
+    }
+
     let userToDelete = uid;
 
     // If UID missing, lookup by email
     if ((!uid || uid.trim() === "") && email) {
+      console.log("🔍 Looking up user by email:", email);
       const userRecord = await admin.auth().getUserByEmail(email);
       userToDelete = userRecord.uid;
+      console.log("✅ Found user UID:", userToDelete);
     }
 
     // Final check
     if (!userToDelete) {
+      console.log("❌ Could not resolve user UID");
       throw new Error("Could not resolve user UID for deletion");
     }
 
+    console.log("🗑️ Deleting user:", userToDelete);
     await admin.auth().deleteUser(userToDelete);
+    console.log("✅ User deleted successfully");
 
     res.status(200).json({ success: true });
   } catch (err) {
     console.error("❌ Auth deletion error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error details:", {
+      message: err.message,
+      code: err.code,
+      stack: err.stack,
+    });
+    res.status(500).json({
+      error: err.message,
+      code: err.code || "UNKNOWN_ERROR",
+    });
   }
 });
 

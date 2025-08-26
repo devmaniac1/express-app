@@ -2,12 +2,14 @@
   "name": "nursery-project-api",
   "version": "1.0.0",
   "description": "Express API server for nursery registration form processing with Firebase integration",
-  "main": "server.js",
+  "main": "api/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
+    "start": "node api/index.js",
+    "start:server": "node server.js",
     "build": "echo \"No build step required for this Express API\"",
     "dev": "nodemon server.js",
+    "dev:api": "nodemon api/index.js",
     "deploy": "firebase deploy --only functions"
   },
   "keywords": [
@@ -23,6 +25,7 @@
   "dependencies": {
     "axios": "^1.11.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "firebase-admin": "^13.4.0",
     "firebase-functions": "^6.4.0",
