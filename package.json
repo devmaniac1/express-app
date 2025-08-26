@@ -6,10 +6,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
+    "build": "echo \"No build step required for this Express API\"",
     "dev": "nodemon server.js",
     "deploy": "firebase deploy --only functions"
   },
-  "keywords": ["express", "firebase", "multer", "document-processing", "api"],
+  "keywords": [
+    "express",
+    "firebase",
+    "multer",
+    "document-processing",
+    "api"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
