@@ -22,6 +22,7 @@ A Node.js Express API server for processing nursery registration forms with Fire
 
 1. Clone or download this project
 2. Install dependencies:
+
    ```bash
    npm install
    ```
@@ -32,13 +33,17 @@ A Node.js Express API server for processing nursery registration forms with Fire
 ## Usage
 
 ### Development Mode
+
 Run the server with auto-restart on file changes:
+
 ```bash
 npm run dev
 ```
 
 ### Production Mode
+
 Start the server:
+
 ```bash
 npm start
 ```
@@ -48,29 +53,34 @@ The server will start on port 8000 by default, or the port specified in the `POR
 ## API Endpoints
 
 ### POST `/extract`
+
 Processes uploaded PDF files and extracts structured data.
 
 **Request:**
+
 - Method: POST
 - Content-Type: multipart/form-data
 - Body: PDF file upload
 
 **Response:**
+
 ```json
 {
   "extracted_schema": {
     "childName": "string",
     "age": "string",
-    "dateOfBirth": "string",
+    "dateOfBirth": "string"
     // ... more extracted fields
   }
 }
 ```
 
 ### POST `/api/deleteUserFromAuth`
+
 Deletes a user from Firebase Authentication.
 
 **Request:**
+
 - Method: POST
 - Content-Type: application/json
 - Body:
@@ -82,6 +92,7 @@ Deletes a user from Firebase Authentication.
   ```
 
 **Response:**
+
 ```json
 {
   "success": true
@@ -105,6 +116,7 @@ Deletes a user from Firebase Authentication.
 ## Firebase Functions
 
 This project is also configured to deploy as Firebase Functions. Use:
+
 ```bash
 npm run deploy
 ```
@@ -119,6 +131,7 @@ npm run deploy
 ## Dependencies
 
 ### Production Dependencies
+
 - **express**: Web framework
 - **multer**: File upload middleware
 - **axios**: HTTP client
@@ -128,4 +141,5 @@ npm run deploy
 - **firebase-functions**: Firebase Functions SDK
 
 ### Development Dependencies
+
 - **nodemon**: Auto-restart server during development
