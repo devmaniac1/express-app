@@ -8,25 +8,10 @@ const path = require("path");
 const cors = require("cors");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
-const serviceAccount = {
-  type: "service_account",
-  project_id: "nursery-project-89d8b",
-  private_key_id: "19a2a10086d62ca82a7347712b323d797067c983",
-  private_key:
-    "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDV9v0dPkJH0hJH\n14PaIFv2LVUMHSmH3px2C54e7Y5XZvBfMahqk735vEKL/gCVHMkRNBzWDeRp+46a\ng5fsqXQAoScj74cRdzM6I32YnAwmicx+P0KsxMhED9qTdsRYHvSdFw5lORIvIIqs\nfsvP/jKlz+02bRDMgWxq7QfsBkvTgr/vRIXsJKnzVdpCn++JZbYgC46JniruxbMh\nZl3zEJmfa0u774iQa2DJzxk+EuIxwKC+46FIc9mkAOo0VpnSB9Zl1vlbWH6TnPlv\nAWrwk5K6KVw3n9KGNA1zZRfWxXzphkdjDi03c/OqtcIZ3JvB1rlMuHaLD6ghK0g2\n0719AqoZAgMBAAECggEAaXxJMX+eQbZJmO2hbYqCjA2xXjWKYhfX30K/A9RuVpzD\naMsckt6fzF2KGWZydxEn97lPdiCHOdDxby/tWJn6PM02dLsERhIUSVdx9ikIvH83\nOA6MGo0xhoyiYA0vo5ovUrspN7I5Ss6qT3x7kuFpquGluy1uGMS95MFTJIO+Ilnu\nOgCa3gSJcHPt5QqC3FsjSFb8miQFojtPTO/7y+bgSoFOZGqzjgDmu4xSC+PTBHRu\nzQTp8PcBQpQm0AD+y56WWNLEX4y7+MWQMWsIOvZ9z6HS0en0YBE1oB5ei2LKucXm\npqkkaFO7e1yDWPRLjvxYXJQpa4yPuvEQmu0ekeT/mQKBgQD9AIvoWs7u7bQEajsS\nF5Vxr3HjfL2J3haJHjIVIBnjd8mAk6UW41Hy6ArLjnr0bZ/S5JkP8khsxdLhpA3f\nNF1zVcDEzXv8tzvve1J5CzRjwi4kSjYFOZ9mdJmxnyzvSH15DgJaegJssCxrGImu\nL1pzW5emXNR1ILBk/HszZ//CWwKBgQDYgAbf2UA/PLxDt5ar2qNYbSjRX7/ob4y3\nsan0ZRg9vgSzQ1kSEZgZp32tyw50DAs6Ita45/9SnRI+WGkxLKc/53afJqT4GGzS\nLim9+6FiS2JgIcuu8/ReF0cDMcUIj8XJr0snNLwWJJvj9sHVYVyyQtw2ubpffKWU\n5heezR6HmwKBgQDZfmXHqoDoLxopDXWYeQO0xoEecfaylWREHdwqAv2eaTSlPseW\nJHcnXUkicmrKw464imH2rm6Ka4l9Bj4Smn6Xjql3xboHpzF0D0z316UC+UQXWGCW\nH1IjjqstYcwMLAIJVfy58NcyvkSBEIgTYIveTWfR0U2nHyHkvpPevlHErwKBgCkb\nxjJi8gwP4D+LcJSZI0L7FzEKWUotRC7tETRSrdOrbQEM3LDNnm/gmcCSOeBXGRqk\n2tipVJW/NWOZLgAkVm2P6bo2gESLfr45/bsROIeNgNR4FlDWCaSEDvvQS3Vgt1Gg\nc0iyfrRFp0QV6qA1qIBAqcfKZFUVOeuX9Qw2LoHZAoGAY2hUNodacmCT3TTEu1Ov\nT+I8M8QgFL1+NMFum/w25RTcdtzLwWAkES2qTtNA6GakAC8x3vy0wgZfkwezWomz\n6L33SBhXoWoOlsQR0Cl22l1GUGc2yxXZGbzgE7lfhfjEzenGROpI/g2Jch6NRX6v\nDgTy7pU/BLZNlZeblAAA1iU=\n-----END PRIVATE KEY-----\n",
-  client_email:
-    "firebase-adminsdk-fbsvc@nursery-project-89d8b.iam.gserviceaccount.com",
-  client_id: "102644135851732800109",
-  auth_uri: "https://accounts.google.com/o/oauth2/auth",
-  token_uri: "https://oauth2.googleapis.com/token",
-  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-  client_x509_cert_url:
-    "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40nursery-project-89d8b.iam.gserviceaccount.com",
-  universe_domain: "googleapis.com",
-};
 
 const app = express();
-const upload = multer({ dest: "uploads/" });
+// Use /tmp for serverless environments like Vercel
+const upload = multer({ dest: "/tmp/" });
 
 // Enable CORS
 app.use(
@@ -198,20 +183,78 @@ const schema = {
   },
 };
 
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+// Initialize Firebase Admin SDK with environment variables or fallback to local file
+let firebaseInitialized = false;
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Use environment variable (for Vercel/production)
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        type: "service_account",
+        project_id: "nursery-project-89d8b",
+        private_key_id: "19a2a10086d62ca82a7347712b323d797067c983",
+        private_key:
+          "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDV9v0dPkJH0hJH\n14PaIFv2LVUMHSmH3px2C54e7Y5XZvBfMahqk735vEKL/gCVHMkRNBzWDeRp+46a\ng5fsqXQAoScj74cRdzM6I32YnAwmicx+P0KsxMhED9qTdsRYHvSdFw5lORIvIIqs\nfsvP/jKlz+02bRDMgWxq7QfsBkvTgr/vRIXsJKnzVdpCn++JZbYgC46JniruxbMh\nZl3zEJmfa0u774iQa2DJzxk+EuIxwKC+46FIc9mkAOo0VpnSB9Zl1vlbWH6TnPlv\nAWrwk5K6KVw3n9KGNA1zZRfWxXzphkdjDi03c/OqtcIZ3JvB1rlMuHaLD6ghK0g2\n0719AqoZAgMBAAECggEAaXxJMX+eQbZJmO2hbYqCjA2xXjWKYhfX30K/A9RuVpzD\naMsckt6fzF2KGWZydxEn97lPdiCHOdDxby/tWJn6PM02dLsERhIUSVdx9ikIvH83\nOA6MGo0xhoyiYA0vo5ovUrspN7I5Ss6qT3x7kuFpquGluy1uGMS95MFTJIO+Ilnu\nOgCa3gSJcHPt5QqC3FsjSFb8miQFojtPTO/7y+bgSoFOZGqzjgDmu4xSC+PTBHRu\nzQTp8PcBQpQm0AD+y56WWNLEX4y7+MWQMWsIOvZ9z6HS0en0YBE1oB5ei2LKucXm\npqkkaFO7e1yDWPRLjvxYXJQpa4yPuvEQmu0ekeT/mQKBgQD9AIvoWs7u7bQEajsS\nF5Vxr3HjfL2J3haJHjIVIBnjd8mAk6UW41Hy6ArLjnr0bZ/S5JkP8khsxdLhpA3f\nNF1zVcDEzXv8tzvve1J5CzRjwi4kSjYFOZ9mdJmxnyzvSH15DgJaegJssCxrGImu\nL1pzW5emXNR1ILBk/HszZ//CWwKBgQDYgAbf2UA/PLxDt5ar2qNYbSjRX7/ob4y3\nsan0ZRg9vgSzQ1kSEZgZp32tyw50DAs6Ita45/9SnRI+WGkxLKc/53afJqT4GGzS\nLim9+6FiS2JgIcuu8/ReF0cDMcUIj8XJr0snNLwWJJvj9sHVYVyyQtw2ubpffKWU\n5heezR6HmwKBgQDZfmXHqoDoLxopDXWYeQO0xoEecfaylWREHdwqAv2eaTSlPseW\nJHcnXUkicmrKw464imH2rm6Ka4l9Bj4Smn6Xjql3xboHpzF0D0z316UC+UQXWGCW\nH1IjjqstYcwMLAIJVfy58NcyvkSBEIgTYIveTWfR0U2nHyHkvpPevlHErwKBgCkb\nxjJi8gwP4D+LcJSZI0L7FzEKWUotRC7tETRSrdOrbQEM3LDNnm/gmcCSOeBXGRqk\n2tipVJW/NWOZLgAkVm2P6bo2gESLfr45/bsROIeNgNR4FlDWCaSEDvvQS3Vgt1Gg\nc0iyfrRFp0QV6qA1qIBAqcfKZFUVOeuX9Qw2LoHZAoGAY2hUNodacmCT3TTEu1Ov\nT+I8M8QgFL1+NMFum/w25RTcdtzLwWAkES2qTtNA6GakAC8x3vy0wgZfkwezWomz\n6L33SBhXoWoOlsQR0Cl22l1GUGc2yxXZGbzgE7lfhfjEzenGROpI/g2Jch6NRX6v\nDgTy7pU/BLZNlZeblAAA1iU=\n-----END PRIVATE KEY-----\n",
+        client_email:
+          "firebase-adminsdk-fbsvc@nursery-project-89d8b.iam.gserviceaccount.com",
+        client_id: "102644135851732800109",
+        auth_uri: "https://accounts.google.com/o/oauth2/auth",
+        token_uri: "https://oauth2.googleapis.com/token",
+        auth_provider_x509_cert_url:
+          "https://www.googleapis.com/oauth2/v1/certs",
+        client_x509_cert_url:
+          "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40nursery-project-89d8b.iam.gserviceaccount.com",
+        universe_domain: "googleapis.com",
+      }),
+    });
+    console.log("✅ Firebase initialized with environment variable");
+    firebaseInitialized = true;
+  }
+  //  else {
+  //   // Fallback to local file (for development)
+  //   const serviceAccount = require("./nursery-project-89d8b-firebase-adminsdk-fbsvc-19a2a10086.json");
+  //   admin.initializeApp({
+  //     credential: admin.credential.cert(serviceAccount),
+  //   });
+  //   console.log("✅ Firebase initialized with local file");
+  //   firebaseInitialized = true;
+  // }
+} catch (error) {
+  console.error("❌ Firebase initialization failed:", error.message);
+  firebaseInitialized = false;
+}
+
+// Environment variables debug endpoint
+app.get("/api/env", (req, res) => {
+  res.json(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
 });
 
-app.get("/api/env", (req, res) => {
-  const envInfo = {
-    node_env: process.env.NODE_ENV,
-    firebase_service_account: process.env.FIREBASE_SERVICE_ACCOUNT,
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({
+    status: "OK",
+    firebase_initialized: firebaseInitialized,
+    firebase_apps_count: admin.apps.length,
     timestamp: new Date().toISOString(),
-    // Add other non-sensitive env vars you want to check
-  };
+  });
+});
 
-  res.json(envInfo);
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "Nursery Registration API",
+    version: "1.0.0",
+    firebase_initialized: firebaseInitialized,
+    endpoints: [
+      "GET /",
+      "GET /health",
+      "GET /api/env",
+      "POST /extract",
+      "POST /api/deleteUserFromAuth",
+    ],
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // API endpoint
@@ -300,6 +343,10 @@ app.post("/extract", upload.single("file"), async (req, res) => {
 app.post("/api/deleteUserFromAuth", async (req, res) => {
   const { uid, email } = req.body;
 
+  if (!firebaseInitialized) {
+    return res.status(500).json({ error: "Firebase is not initialized" });
+  }
+
   if (!uid && !email) {
     return res.status(400).json({ error: "Missing uid or email" });
   }
@@ -327,8 +374,20 @@ app.post("/api/deleteUserFromAuth", async (req, res) => {
   }
 });
 
-// Export for Vercel
-module.exports = app;
+// Export for Vercel - wrap in error handling
+try {
+  module.exports = app;
+} catch (error) {
+  console.error("❌ Module export error:", error);
+  // Create a minimal app as fallback
+  const fallbackApp = require("express")();
+  fallbackApp.get("*", (req, res) => {
+    res
+      .status(500)
+      .json({ error: "Service initialization failed", details: error.message });
+  });
+  module.exports = fallbackApp;
+}
 
 // Export for Firebase Functions
 exports.api = functions.https.onRequest(app);
