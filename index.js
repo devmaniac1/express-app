@@ -327,6 +327,9 @@ app.post("/api/deleteUserFromAuth", async (req, res) => {
   }
 });
 
+// Export for Vercel
+module.exports = app;
+
 // Export for Firebase Functions
 exports.api = functions.https.onRequest(app);
 
