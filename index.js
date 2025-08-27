@@ -10,6 +10,7 @@ const functions = require("firebase-functions");
 
 const app = express();
 const upload = multer({ dest: "/tmp/" });
+const db = admin.firestore();
 
 // Enable CORS
 app.use(
