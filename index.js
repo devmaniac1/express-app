@@ -14,12 +14,7 @@ const app = express();
 const upload = multer({ dest: "/tmp/" });
 
 // Enable CORS
-app.use(
-  cors({
-    origin: ["http://localhost:3000", "https://your-production-domain.com"],
-    credentials: true,
-  })
-);
+app.use(cors());
 app.use(express.json());
 
 const VA_API_KEY =
