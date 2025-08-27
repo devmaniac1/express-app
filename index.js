@@ -333,6 +333,38 @@ app.post("/api/deleteUserFromAuth", async (req, res) => {
   }
 });
 
+app.post("/api/createUser", async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ success: false, error: "Missing fields" });
+  }
+
+  try {
+    // 1️⃣ Create user in Firebase Auth
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+      displayName: name,
+    });
+
+    const uid = userRecord.uid;
+
+    // 2️⃣ Add user to Firestore admin collection
+    await db.collection("admin").doc(uid).set({
+      name,
+      email,
+      accessCode: 3, // default access
+      createdAt: new Date().toISOString(),
+    });
+
+    res.json({ success: true, uid });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Export for Vercel - wrap in error handling
 try {
   module.exports = app;
