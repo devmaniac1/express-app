@@ -10,6 +10,7 @@ const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 
 const app = express();
+const db = admin.firestore();
 // Use /tmp for serverless environments like Vercel
 const upload = multer({ dest: "/tmp/" });
 
